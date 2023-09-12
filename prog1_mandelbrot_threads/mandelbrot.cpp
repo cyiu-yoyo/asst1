@@ -155,8 +155,8 @@ void mandelbrotThread(
     pthread_t workers[MAX_THREADS];
     WorkerArgs args[MAX_THREADS];
 
-    unsigned int portion = height / numThreads;
-
+    float portion = (float)height / numThreads;
+    
     for (int i=0; i<numThreads; i++) {
         // Set thread arguments
         args[i].threadId = i;
@@ -169,8 +169,8 @@ void mandelbrotThread(
         args[i].maxIterations = maxIterations;
         args[i].output = output;
         // calculate the porition of start and end row base on the number of threads
-        args[i].startRow = i * portion;
-        args[i].endRow = (i+1) * portion;
+        args[i].startRow = (i * portion);
+        args[i].endRow = ((i+1) * portion);
     }
 
     // Fire up the worker threads.  Note that numThreads-1 pthreads
