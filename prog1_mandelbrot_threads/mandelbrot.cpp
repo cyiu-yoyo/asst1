@@ -3,6 +3,7 @@
 
 // Use this code to time your threads
 #include "CycleTimer.h"
+#include <vector>
 
 
 /*
@@ -99,13 +100,15 @@ void mandelbrotSerial(
 
 
 // Struct for passing arguments to thread routine
+// for 1.4 change unsigned int startRow, endRow
+// to vector of unsigned int startRow, endRow
 typedef struct {
     float x0, x1;
     float y0, y1;
     unsigned int width;
     unsigned int height;
-    unsigned int startRow;
-    unsigned int endRow;
+    std::vector<unsigned int> startRows;
+    std::vector<unsigned int> endRows;
     int maxIterations;
     int* output;
     int threadId;
@@ -122,12 +125,14 @@ void* workerThreadStart(void* threadArgs) {
 
     double startTime = CycleTimer::currentSeconds();
     WorkerArgs* args = static_cast<WorkerArgs*>(threadArgs);
-
-    // call out sequencial `mandelbrotSerial` for each thread
+    unsigned int num = args->startRows.size();
+    for(unsigned int i = 0; i < num; ++i){
+       // call out sequencial `mandelbrotSerial` for each thread, on each portion of rows
     mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, args->width, args->height,
-        args->startRow, args->endRow, args->maxIterations, args->output);
+        args->startRows[i], args->endRows[i], args->maxIterations, args->output); 
+    } 
 
-    // printf("debug info from thread %d. start: %d end: %d\n", args->threadId, args->startRow, args->endRow);
+    //printf("debug info from thread %d. start: %d end: %d\n", args->threadId, args->startRow, args->endRow);
     double endTime = CycleTimer::currentSeconds();
     printf("[time usage for thread %d]:\t\t[%.3f] ms\n", args->threadId, (endTime - startTime) * 1000);
     return NULL;
@@ -155,7 +160,8 @@ void mandelbrotThread(
     pthread_t workers[MAX_THREADS];
     WorkerArgs args[MAX_THREADS];
 
-    float portion = (float)height / numThreads;
+    // not required for 1.4
+    // float portion = (float)height / numThreads;
     
     for (int i=0; i<numThreads; i++) {
         // Set thread arguments
@@ -168,9 +174,15 @@ void mandelbrotThread(
         args[i].height = height;
         args[i].maxIterations = maxIterations;
         args[i].output = output;
-        // calculate the porition of start and end row base on the number of threads
-        args[i].startRow = (i * portion);
-        args[i].endRow = ((i+1) * portion);
+        
+    }
+
+    // divide the image into 900 rows, and using round robin to assign each 
+    // row to each thread, increasing the possibility to get a even workload
+    for(int i = 0; i < height; ++i){
+        int res = i % numThreads;
+        args[res].startRows.push_back(i);
+        args[res].endRows.push_back(i+1);
     }
 
     // Fire up the worker threads.  Note that numThreads-1 pthreads
