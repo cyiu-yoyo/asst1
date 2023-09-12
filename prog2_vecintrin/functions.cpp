@@ -75,32 +75,34 @@ void absVector(float* values, float* output, int N) {
 // to the log_2 of the exponent
 void clampedExpSerial(float* values, int* exponents, float* output, int N) {
     for (int i=0; i<N; i++) {
-	float x = values[i];
-	float result = 1.f;
-	int y = exponents[i];
-	float xpower = x;
-	while (y > 0) {
-	    if (y & 0x1) {
-			result *= xpower;
+		float x = values[i];
+		float result = 1.f;
+		int y = exponents[i];
+		float xpower = x;
+		while (y > 0) {
+			if (y & 0x1) {
+				result *= xpower;
+			}
+			xpower = xpower * xpower;
+			y >>= 1;
 		}
-	    xpower = xpower * xpower;
-	    y >>= 1;
-	}
-	if (result > 4.18f) {
-	    result = 4.18f;
-	}
-	output[i] = result;
+		if (result > 4.18f) {
+			result = 4.18f;
+		}
+		output[i] = result;
     }
 }
 
 void clampedExpVector(float* values, int* exponents, float* output, int N) {
 	__cmu418_vec_float x, result, xpower; // for float values and result for each value, xpower
 	__cmu418_vec_float clampValue; // for clamp value 4.18f
+	__cmu418_vec_int allZeros, allOnes, yLastBit;
 	__cmu418_vec_int y; // for int exponents
-	__cmu418_mask maskAll, maskAllZero, maskYStatus;
+	__cmu418_mask maskAll, maskYStatus, maskYLastBit, maskClamp;
 
 	clampValue = _cmu418_vset_float(4.18f);
-	maskAllZero = _cmu418_init_ones(0); // all 0 mask
+	allZeros = _cmu418_vset_int(0);
+	allOnes = _cmu418_vset_int(1);
 	for (int i = 0; i <= N; i+= VECTOR_WIDTH){
 		if ((N - i) < VECTOR_WIDTH){
 			// N % VECTOR_WIDTH != 0
@@ -115,10 +117,31 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
 		_cmu418_vload_float(x, values + i, maskAll);
         _cmu418_vload_int(y, exponents + i, maskAll);
 		result = _cmu418_vset_float(1.0f);
-		xpower = x;
+		xpower = x; // fixme?
 
-		
+		maskYStatus = _cmu418_init_ones(0);
+		_cmu418_vgt_int(maskYStatus, y, allZeros,maskAll);
+		while(_cmu418_cntbits(maskYStatus) != 0){
 
+			//check least significant bit of y: if(y & 0x1)
+			yLastBit = _cmu418_vset_int(0);
+			_cmu418_vbitand_int(yLastBit, y, allOnes, maskYStatus);
+			_cmu418_vgt_int(maskYLastBit, yLastBit, allZeros, maskYStatus);
+
+			//conditional result *= xpower;
+			_cmu418_vmult_float(result, result, xpower, maskYLastBit);
+			//conditional xpower = xpower * xpower;
+			_cmu418_vmult_float(xpower, xpower, xpower, maskYStatus);	
+		}
+
+		// Clamp the result
+		// if (result > 4.18f)
+		maskClamp = _cmu418_init_ones(0);	
+		_cmu418_vgt_float(maskClamp, result, clampValue, maskAll);
+		_cmu418_vmove_float(result, clampValue, maskClamp);
+
+		//write result back to memory
+		_cmu418_vstore_float(output+i, result, maskAll);
 		
 	}
 }
