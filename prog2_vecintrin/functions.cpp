@@ -27,10 +27,22 @@ void absVector(float* values, float* output, int N) {
     //  Note: Take a careful look at this loop indexing.  This example
     //  code is not guaranteed to work when (N % VECTOR_WIDTH) != 0.
     //  Why is that the case?
-    for (int i=0; i<N; i+=VECTOR_WIDTH) {
+	// when N % VECTOR_WIDTH != 0, but we still + VECTOR_WIDTH, we may 
+	// fail to handle the last part of the arraies.
 
+	// fixed version:
+    for (int i=0; i<=N; i+=VECTOR_WIDTH) {
+	
+	if ((N - i) < VECTOR_WIDTH){
+		// N % VECTOR_WIDTH != 0
+		// handle last part of the array by using special mask
+		maskAll = _cmu418_init_ones(N-i);
+	} else {
+		// All ones
+		maskAll = _cmu418_init_ones();
+	}
 	// All ones
-	maskAll = _cmu418_init_ones();
+	// maskAll = _cmu418_init_ones();
 
 	// All zeros
 	maskIsNegative = _cmu418_init_ones(0);
@@ -53,6 +65,7 @@ void absVector(float* values, float* output, int N) {
 	// Write results back to memory
 	_cmu418_vstore_float(output+i, result, maskAll);
     }
+
 }
 
 // Accepts an array of values and an array of exponents
@@ -81,8 +94,33 @@ void clampedExpSerial(float* values, int* exponents, float* output, int N) {
 }
 
 void clampedExpVector(float* values, int* exponents, float* output, int N) {
-    // Implement your vectorized version of clampedExpSerial here
-    //  ...
+	__cmu418_vec_float x, result, xpower; // for float values and result for each value, xpower
+	__cmu418_vec_float clampValue; // for clamp value 4.18f
+	__cmu418_vec_int y; // for int exponents
+	__cmu418_mask maskAll, maskAllZero, maskYStatus;
+
+	clampValue = _cmu418_vset_float(4.18f);
+	maskAllZero = _cmu418_init_ones(0); // all 0 mask
+	for (int i = 0; i <= N; i+= VECTOR_WIDTH){
+		if ((N - i) < VECTOR_WIDTH){
+			// N % VECTOR_WIDTH != 0
+			// handle last part of the array by using special mask
+			maskAll = _cmu418_init_ones(N-i);
+		} else {
+			// All ones
+			maskAll = _cmu418_init_ones();
+		}	
+
+		// load values
+		_cmu418_vload_float(x, values + i, maskAll);
+        _cmu418_vload_int(y, exponents + i, maskAll);
+		result = _cmu418_vset_float(1.0f);
+		xpower = x;
+
+		
+
+		
+	}
 }
 
 
