@@ -13,8 +13,10 @@ void initRandom(float *values, int N) {
 void initGood(float *values, int N) {
     for (int i=0; i<N; i++)
     {
-        // Todo: Choose values
-        values[i] = 1.0f;
+        // get the same number for all to guarantee the
+        // even workload, and large workload to mitigate
+        // the overhead of SIMD
+        values[i] = 2.9999998f;
     }
 }
 
@@ -22,8 +24,14 @@ void initGood(float *values, int N) {
 void initBad(float *values, int N) {
     for (int i=0; i<N; i++)
     {
-        // Todo: Choose values
-        values[i] = 1.0f;
+        // to get a bad speedup, we can leverage the vectorization
+        // batch process, and make others wait for the single one
+        // in the same vector
+        if (i % 8 == 0){
+            values[i] = 2.9999998f;
+        }else{
+            values[i] = 1.0f;
+        }
     }
 }
 
