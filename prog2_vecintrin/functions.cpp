@@ -120,19 +120,25 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
 		xpower = x; // fixme?
 
 		maskYStatus = _cmu418_init_ones(0);
-		_cmu418_vgt_int(maskYStatus, y, allZeros,maskAll);
+		_cmu418_vgt_int(maskYStatus, y, allZeros, maskAll);
 		while(_cmu418_cntbits(maskYStatus) != 0){
 
 			//check least significant bit of y: if(y & 0x1)
 			yLastBit = _cmu418_vset_int(0);
 			_cmu418_vbitand_int(yLastBit, y, allOnes, maskYStatus);
+			maskYLastBit = _cmu418_init_ones(0);
 			_cmu418_vgt_int(maskYLastBit, yLastBit, allZeros, maskYStatus);
 
 			//conditional result *= xpower;
 			_cmu418_vmult_float(result, result, xpower, maskYLastBit);
 			//conditional xpower = xpower * xpower;
 			_cmu418_vmult_float(xpower, xpower, xpower, maskYStatus);	
-		}
+
+			//rightshift
+			_cmu418_vshiftright_int(y, y, allOnes, maskYStatus);
+			//calculate maskYStatus
+			_cmu418_vgt_int(maskYStatus, y, allZeros, maskYStatus);	
+		}	
 
 		// Clamp the result
 		// if (result > 4.18f)
