@@ -16,12 +16,6 @@ void saxpyStreaming(int N,
                     float Y[],
                     float result[])
 {
-    // Replace this code with ones that make use of the streaming instructions
-    // saxpySerial(N, scale, X, Y, result);
-
-
-    // alignas(16) float a[4] = {scale, scale, scale, scale};
-    // __m128 vecA = _mm_load_ps(a);
     __m128 vecA = _mm_set1_ps(scale);
 
     // assume that N is dividible by 4

@@ -117,7 +117,7 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
 		_cmu418_vload_float(x, values + i, maskAll);
         _cmu418_vload_int(y, exponents + i, maskAll);
 		result = _cmu418_vset_float(1.0f);
-		xpower = x; // fixme?
+		xpower = x;
 
 		maskYStatus = _cmu418_init_ones(0);
 		_cmu418_vgt_int(maskYStatus, y, allZeros, maskAll);
